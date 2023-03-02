@@ -1,0 +1,10 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.global.parameters]
+stack_name = "prowe-dart-warehouse"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-9k9zwqsha4fo"
+s3_prefix = "prowe-dart-warehouse"
+region = "us-east-1"
+capabilities = ["CAPABILITY_IAM", "CAPABILITY_AUTO_EXPAND"]
+image_repositories = []
