@@ -7,6 +7,12 @@ Globals:
     Runtime: python3.9
 
 Resources:
+  ResourceGroup:
+    Type: "AWS::ResourceGroups::Group" 
+    Properties:
+      Name: !Ref AWS::StackName
+      Description: "Resources for the dart_warehouse POC"
+
   RedshiftSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -22,17 +28,14 @@ Resources:
     Type: AWS::RedshiftServerless::Namespace
     Properties:
       NamespaceName: dart-warehouse
-      LogExports:
-        - userlog
-        - connectionlog
-        - useractivitylog
-
+      
   RedshiftWorkgroup:
     Type: AWS::RedshiftServerless::Workgroup
     Properties:
       WorkgroupName: dart-warehouse-wg
       NamespaceName: !Ref RedshiftNamespace
       PubliclyAccessible: true
+      BaseCapacity: 32
       SecurityGroupIds:
         - !Ref RedshiftSecurityGroup
       Tags:
