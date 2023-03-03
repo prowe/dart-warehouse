@@ -1,1 +1,5 @@
 .aws-sam
+
+target/
+dbt_packages/
+logs/

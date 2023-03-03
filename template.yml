@@ -7,6 +7,17 @@ Globals:
     Runtime: python3.9
 
 Resources:
+  RedshiftSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow Redshift ingress
+      VpcId: vpc-27ccbb5d 
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          CidrIp: 0.0.0.0/0
+          FromPort: 5439
+          ToPort: 5439
+
   RedshiftNamespace:
     Type: AWS::RedshiftServerless::Namespace
     Properties:
@@ -22,6 +33,8 @@ Resources:
       WorkgroupName: dart-warehouse-wg
       NamespaceName: !Ref RedshiftNamespace
       PubliclyAccessible: true
+      SecurityGroupIds:
+        - !Ref RedshiftSecurityGroup
       Tags:
         - Key: RedshiftDataFullAccess
           Value: "true"

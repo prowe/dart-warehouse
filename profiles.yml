@@ -1,0 +1,12 @@
+dart_warehouse:
+  target: dev
+  outputs:
+    dev:
+      type: redshift
+      host: dart-warehouse-wg.144406111952.us-east-1.redshift-serverless.amazonaws.com
+      port: 5439
+      user: "{{ env_var('DBT_USER') }}"
+      password: "{{ env_var('DBT_PASSWORD') }}"
+      dbname: dev
+      schema: wh
+      threads: 1
