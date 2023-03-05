@@ -13,49 +13,78 @@ Resources:
       Name: !Ref AWS::StackName
       Description: "Resources for the dart_warehouse POC"
 
-  RedshiftSecurityGroup:
+  DatabaseSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow Redshift ingress
+      GroupDescription: Allow SQL ingress
       VpcId: vpc-27ccbb5d 
       SecurityGroupIngress:
         - IpProtocol: tcp
           CidrIp: 0.0.0.0/0
-          FromPort: 5439
+          FromPort: 5432
           ToPort: 5439
 
-  RedshiftNamespace:
-    Type: AWS::RedshiftServerless::Namespace
+  RDSCluster: 
+    Type: "AWS::RDS::DBCluster"
     Properties:
-      NamespaceName: dart-warehouse
-      
-  RedshiftWorkgroup:
-    Type: AWS::RedshiftServerless::Workgroup
-    Properties:
-      WorkgroupName: dart-warehouse-wg
-      NamespaceName: !Ref RedshiftNamespace
+      DatabaseName: wh
+      Engine: aurora-postgresql
+      EngineVersion: 14.6
+      MasterUsername: postgres
+      ManageMasterUserPassword: true
+      ServerlessV2ScalingConfiguration:
+        MinCapacity: 0.5
+        MaxCapacity: 1
+      VpcSecurityGroupIds:
+        - !Ref DatabaseSecurityGroup
+
+  DBInstance:
+    Type: "AWS::RDS::DBInstance"
+    Properties: 
+      DBClusterIdentifier: !Ref RDSCluster
+      DBInstanceClass: db.serverless
+      Engine: aurora-postgresql
       PubliclyAccessible: true
-      BaseCapacity: 32
-      SecurityGroupIds:
-        - !Ref RedshiftSecurityGroup
-      Tags:
-        - Key: RedshiftDataFullAccess
-          Value: "true"
+
+  # RedshiftNamespace:
+  #   Type: AWS::RedshiftServerless::Namespace
+  #   Properties:
+  #     NamespaceName: dart-warehouse
+
+  # RedshiftWorkgroup:
+  #   Type: AWS::RedshiftServerless::Workgroup
+  #   Properties:
+  #     WorkgroupName: dart-warehouse-wg
+  #     NamespaceName: !Ref RedshiftNamespace
+  #     PubliclyAccessible: true
+  #     BaseCapacity: 32
+  #     SecurityGroupIds:
+  #       - !Ref RedshiftSecurityGroup
+  #     Tags:
+  #       - Key: RedshiftDataFullAccess
+  #         Value: "true"
 
   PollVehiclePositions:
     Type: AWS::Serverless::Function
+    DependsOn:
+      - DBInstance
     Properties:
       CodeUri: poll_dart_functions
       Handler: poll_vehicle_positions.handler
+      Layers:
+       - arn:aws:lambda:us-east-1:177933569100:layer:AWS-Parameters-and-Secrets-Lambda-Extension:4
       MemorySize: 256
       Timeout: 30
       Environment:
         Variables:
-          DB_NAME: !GetAtt RedshiftNamespace.Namespace.DbName
-          ADMIN_USERNAME: !GetAtt RedshiftNamespace.Namespace.AdminUsername
-          WORKGROUP_NAME: !Ref RedshiftWorkgroup
+          DATABASE_HOST: !GetAtt RDSCluster.Endpoint.Address
+          DATABASE_SECRET_ARN: !GetAtt RDSCluster.MasterUserSecret.SecretArn
       Policies:
-        - arn:aws:iam::aws:policy/AmazonRedshiftDataFullAccess
+        - Version: '2012-10-17' 
+          Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !GetAtt RDSCluster.MasterUserSecret.SecretArn
       Events:
         ScheduleEvent:
           Type: ScheduleV2
