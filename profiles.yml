@@ -4,9 +4,9 @@ dart_warehouse:
     dev:
       type: postgres
       host: "{{ env_var('DBT_HOST') }}"
-      port: 5432
+      port: 3306
       user: "{{ env_var('DBT_USER') }}"
       password: "{{ env_var('DBT_PASSWORD') }}"
-      dbname: wh
+      dbname: postgres
       schema: public
       threads: 1

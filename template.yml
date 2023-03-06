@@ -17,17 +17,14 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Allow SQL ingress
-      VpcId: vpc-27ccbb5d 
+      VpcId: vpc-27ccbb5d
       SecurityGroupIngress:
-        - IpProtocol: tcp
+        - IpProtocol: "-1"
           CidrIp: 0.0.0.0/0
-          FromPort: 5432
-          ToPort: 5439
 
   RDSCluster: 
     Type: "AWS::RDS::DBCluster"
     Properties:
-      DatabaseName: wh
       Engine: aurora-postgresql
       EngineVersion: 14.6
       MasterUsername: postgres
@@ -78,15 +75,24 @@ Resources:
       Environment:
         Variables:
           DATABASE_HOST: !GetAtt RDSCluster.Endpoint.Address
+          DATABASE_PORT: !GetAtt RDSCluster.Endpoint.Port
           DATABASE_SECRET_ARN: !GetAtt RDSCluster.MasterUserSecret.SecretArn
       Policies:
         - Version: '2012-10-17' 
           Statement:
             - Effect: Allow
-              Action: secretsmanager:GetSecretValue
+              Action: "secretsmanager:GetSecretValue"
               Resource: !GetAtt RDSCluster.MasterUserSecret.SecretArn
       Events:
         ScheduleEvent:
           Type: ScheduleV2
           Properties:
             ScheduleExpression: "rate(1 minute)"
+
+Outputs:
+  DatabaseAddress:
+    Value: !GetAtt RDSCluster.Endpoint.Address
+  DatabasePort:
+    Value: !GetAtt RDSCluster.Endpoint.Port
+  DatabaseSecretArn:
+    Value: !GetAtt RDSCluster.MasterUserSecret.SecretArn
