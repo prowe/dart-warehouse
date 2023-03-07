@@ -2,10 +2,12 @@
 
 set -e
 
+stack_info=$(aws cloudformation describe-stacks --stack-name=prowe-dart-warehouse --query='Stacks[0].Outputs')
+secret_id=$(echo $stack_info | jq '.[] | select(.OutputKey == "DatabaseSecretArn") | .OutputValue' --raw-output)
 export creds=$(aws secretsmanager get-secret-value \
-    --secret-id 'arn:aws:secretsmanager:us-east-1:144406111952:secret:rds!cluster-cbac33c5-8a5e-4edd-b1b4-6114ef99a0c8-0em0Sr' \
+    --secret-id $secret_id \
     --output=text --query='SecretString')
-export DBT_HOST='prowe-dart-warehouse-rdscluster-qbunkxpbvivf.cluster-c8cpm1j8oloi.us-east-1.rds.amazonaws.com'
+export DBT_HOST=$(echo $stack_info | jq '.[] | select(.OutputKey == "DatabaseAddress") | .OutputValue' --raw-output)
 export DBT_USER=$(echo $creds | jq .username --raw-output)
 export DBT_PASSWORD=$(echo $creds | jq .password --raw-output) 
 

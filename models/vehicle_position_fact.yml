@@ -1,0 +1,27 @@
+version: 2
+models:
+  - name: vehicle_position_fact
+    config:
+      materialized: table
+      indexes:
+        - columns: [ 'at_ts' ]
+        - columns: [ 'vehicle_id', 'at_ts' ]
+    columns:
+      - name: at_ts
+        tests:
+          - not_null
+      - name: vehicle_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('vehicle_dim')
+              field: id
+      # - name: route_id
+      #   tests:
+      #     - not_null
+      #     - relationships:
+      #         to: ref('route_dim')
+      #         field: route_id
+      - name: position
+        tests:
+          - not_null

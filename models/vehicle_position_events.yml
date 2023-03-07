@@ -1,0 +1,7 @@
+version: 2
+
+sources:
+  - name: poll_dart
+    schema: public
+    tables:
+      - name: vehicle_position_events

@@ -1,0 +1,17 @@
+version: 2
+models:
+  - name: vehicle_dim
+    config:
+      materialized: table
+      indexes:
+        - columns: [ 'id' ]
+          unique: true
+    columns:
+      - name: id
+        tests:
+          - unique
+          - not_null
+      - name: label
+        tests:
+          - not_null
+    

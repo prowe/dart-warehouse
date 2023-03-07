@@ -1,12 +1,7 @@
-{{
-  config(
-    materialized='table'
-  )
-}}
-
-select 
+SELECT
     "timestamp" as at_ts,
+    trip_route_id as route_id,
     vehicle_id::varchar(250) as vehicle_id,
     ST_Point(position_longitude, position_latitude, 4326)::geography as position,
     position_bearing
-from vehicle_position_events
+FROM {{ source('poll_dart', 'vehicle_position_events') }}
