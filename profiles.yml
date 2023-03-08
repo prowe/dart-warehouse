@@ -9,4 +9,4 @@ dart_warehouse:
       password: "{{ env_var('DBT_PASSWORD') }}"
       dbname: postgres
       schema: public
-      threads: 1
+      threads: 3
