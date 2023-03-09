@@ -87,9 +87,7 @@ def __write_stream_to_database(position_stream):
 
 
 def handler(event, context):
-    print('handling event', event)
     feed_message = __get_vehicle_positions()
-    print(feed_message)
     position_stream = __extract_feed_message_to_stream(feed_message)
     __write_stream_to_database(position_stream)
     print("Rows inserted: ", len(feed_message.entity))

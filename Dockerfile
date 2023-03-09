@@ -1,0 +1,8 @@
+FROM ghcr.io/dbt-labs/dbt-postgres
+
+ENV DBT_HOST=TODO
+ENV DBT_USER=TODO
+ENV DBT_PASSWORD=TODO
+ENV DBT_PROFILES_DIR=/usr/app/dbt
+
+ADD . .

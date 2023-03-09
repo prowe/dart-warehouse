@@ -91,6 +91,47 @@ Resources:
           Properties:
             ScheduleExpression: "rate(1 minute)"
 
+  DBTTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                "aws:SourceAccount": !Ref AWS::AccountId
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'secretsmanager:GetSecretValue'
+                Resource:
+                  - !GetAtt RDSCluster.MasterUserSecret.SecretArn
+
+  # DBTTaskDefinition:
+  #   Type: AWS::ECS::TaskDefinition
+  #   Properties:
+  #     Family: dart-warehouse-dbt
+  #     Cpu: 512
+  #     Memory: 1024
+  #     NetworkMode: awsvpc
+  #     RequiresCompatibilities:
+  #       - FARGATE
+  #     TaskRoleArn: !GetAtt DBTTaskRole.Arn
+  #     ExecutionRoleArn: !GetAtt DBTTaskRole.Arn
+  #     ContainerDefinitions:
+  #       - Name: dbt
+  #         Image: 
+
 Outputs:
   DatabaseAddress:
     Value: !GetAtt RDSCluster.Endpoint.Address
