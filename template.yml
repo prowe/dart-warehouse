@@ -121,20 +121,28 @@ Resources:
                 Resource:
                   - !GetAtt RDSCluster.MasterUserSecret.SecretArn
 
-  # DBTTaskDefinition:
-  #   Type: AWS::ECS::TaskDefinition
-  #   Properties:
-  #     Family: dart-warehouse-dbt
-  #     Cpu: 512
-  #     Memory: 1024
-  #     NetworkMode: awsvpc
-  #     RequiresCompatibilities:
-  #       - FARGATE
-  #     TaskRoleArn: !GetAtt DBTTaskRole.Arn
-  #     ExecutionRoleArn: !GetAtt DBTTaskRole.Arn
-  #     ContainerDefinitions:
-  #       - Name: dbt
-  #         Image: 
+  DBTTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: dart-warehouse-dbt
+      Cpu: 512
+      Memory: 1024
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      TaskRoleArn: !GetAtt DBTTaskRole.Arn
+      ExecutionRoleArn: !GetAtt DBTTaskRole.Arn
+      ContainerDefinitions:
+        - Name: dbt
+          Image: !Sub "ghcr.io/sourceallies/dart-warehouse/dbt:${ImageTag}"
+          Environment:
+            - Name: DBT_HOST
+              Value: !GetAtt RDSCluster.Endpoint.Address
+          Secrets:
+            - Name: DBT_USER
+              ValueFrom: !Sub "${RDSCluster.MasterUserSecret.SecretArn}:username::" 
+            - Name: DBT_PASSWORD
+              ValueFrom: !Sub "${RDSCluster.MasterUserSecret.SecretArn}:password::"
 
 Outputs:
   DatabaseAddress:
