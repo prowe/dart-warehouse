@@ -36,7 +36,7 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.GITHUB_SHA }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
   deploy:
     name: Deploy to AWS
@@ -67,5 +67,8 @@ jobs:
         run: sam build
 
       - name: Deploy
-        run: sam deploy
+        run: |
+          sam deploy \
+            --parameter_overrides \
+              "ImageTag=$GIT_SHA"
       
