@@ -36,7 +36,7 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.GITHUB_SHA }}
 
   deploy:
     name: Deploy to AWS
@@ -44,6 +44,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    needs: [ "build-image" ]
     steps:
       - name: Checkout
         uses: actions/checkout@v2
