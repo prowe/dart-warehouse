@@ -121,6 +121,12 @@ Resources:
                 Resource:
                   - !GetAtt RDSCluster.MasterUserSecret.SecretArn
 
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      CapacityProviders:
+        - FARGATE
+
   DBTTaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -143,6 +149,8 @@ Resources:
               ValueFrom: !Sub "${RDSCluster.MasterUserSecret.SecretArn}:username::" 
             - Name: DBT_PASSWORD
               ValueFrom: !Sub "${RDSCluster.MasterUserSecret.SecretArn}:password::"
+
+
 
 Outputs:
   DatabaseAddress:
