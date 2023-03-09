@@ -69,6 +69,6 @@ jobs:
       - name: Deploy
         run: |
           sam deploy \
-            --parameter_overrides \
+            --parameter-overrides \
               "ImageTag=$GIT_SHA"
       
