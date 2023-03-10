@@ -160,7 +160,7 @@ Resources:
       Description: Runs the DART Warehouse build process
       ScheduleExpression: "rate(5 minutes)"
       FlexibleTimeWindow:
-        Mode: OFF
+        Mode: Off
       Target:
         Arn: !GetAtt Cluster.Arn
         RoleArn: !GetAtt DBTTaskRole.Arn
