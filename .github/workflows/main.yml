@@ -41,6 +41,7 @@ jobs:
   deploy:
     name: Deploy to AWS
     runs-on: ubuntu-latest
+    concurrency: dev-deploy
     permissions:
       id-token: write
       contents: read
