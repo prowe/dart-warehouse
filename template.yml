@@ -192,7 +192,7 @@ Resources:
     Type: AWS::Scheduler::Schedule
     Properties:
       Description: Runs the DART Warehouse build process
-      ScheduleExpression: "rate(10 minutes)"
+      ScheduleExpression: "rate(1 day)"
       ScheduleExpressionTimezone: "America/Chicago"
       FlexibleTimeWindow: 
         Mode: "OFF"
