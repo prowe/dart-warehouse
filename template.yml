@@ -190,10 +190,9 @@ Resources:
     Properties:
       Description: Runs the DART Warehouse build process
       ScheduleExpression: "rate(5 minutes)"
-      ScheduleExpressionTimezone: 
-      FlexibleTimeWindow: America/Chicago
-        Mode: "FLEXIBLE"
-        MaximumWindowInMinutes: 2
+      ScheduleExpressionTimezone: "America/Chicago"
+      FlexibleTimeWindow: 
+        Mode: "OFF"
       Input: {}
       Target:
         Arn: !GetAtt Cluster.Arn
