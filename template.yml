@@ -196,7 +196,7 @@ Resources:
       Target:
         Arn: !GetAtt Cluster.Arn
         RoleArn: !GetAtt SchedulerRole.Arn
-        Input: {}
+        Input: "{}"
         EcsParameters:
           TaskCount: 1
           LaunchType: FARGATE
