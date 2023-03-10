@@ -103,9 +103,7 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Service:
-                - ecs-tasks.amazonaws.com
-                - scheduler.amazonaws.com
+              Service: ecs-tasks.amazonaws.com
             Action: sts:AssumeRole
             Condition:
               StringEquals:
@@ -155,6 +153,29 @@ Resources:
             - Name: DBT_PASSWORD
               ValueFrom: !Sub "${RDSCluster.MasterUserSecret.SecretArn}:password::"
 
+  SchedulerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: scheduler.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                "aws:SourceAccount": !Ref AWS::AccountId
+      Policies:
+        - PolicyName: runtasks
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecs:RunTask
+                Resource: "*"
+
   WarehouseBuildSchedule:
     Type: AWS::Scheduler::Schedule
     Properties:
@@ -165,7 +186,7 @@ Resources:
         MaximumWindowInMinutes: 2
       Target:
         Arn: !GetAtt Cluster.Arn
-        RoleArn: !GetAtt DBTTaskRole.Arn
+        RoleArn: !GetAtt SchedulerRole.Arn
         EcsParameters:
           TaskCount: 1
           LaunchType: FARGATE
