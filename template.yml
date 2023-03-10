@@ -207,6 +207,7 @@ Resources:
           TaskDefinitionArn: !Ref DBTTaskDefinition
           NetworkConfiguration:
             AwsvpcConfiguration:
+              AssignPublicIp: ENABLED
               Subnets:
                 - subnet-d30953b4
                 - subnet-86c62ccb
