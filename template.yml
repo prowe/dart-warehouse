@@ -141,6 +141,8 @@ Resources:
       ContainerDefinitions:
         - Name: dbt
           Image: !Sub "ghcr.io/sourceallies/dart-warehouse/dbt:${ImageTag}"
+          Command:
+            - build
           Environment:
             - Name: DBT_HOST
               Value: !GetAtt RDSCluster.Endpoint.Address
@@ -150,7 +152,28 @@ Resources:
             - Name: DBT_PASSWORD
               ValueFrom: !Sub "${RDSCluster.MasterUserSecret.SecretArn}:password::"
 
-
+  NightlyETLSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Runs the DART Warehouse build process
+      ScheduleExpression: "rate(5 minutes)"
+      Targets:
+        - Id: exec-etl
+          Arn: !GetAtt Cluster.Arn
+          RoleArn: !GetAtt DBTTaskRole.Arn
+          EcsParameters:
+            TaskCount: 1
+            LaunchType: FARGATE
+            TaskDefinitionArn: !Ref DBTTaskDefinition
+            NetworkConfiguration:
+              AwsVpcConfiguration:
+                Subnets:
+                  - subnet-d30953b4
+                  - subnet-86c62ccb
+                  - subnet-51001c5e
+                  - subnet-b3092eef
+                  - subnet-29b0de17
+                  - subnet-3b103115
 
 Outputs:
   DatabaseAddress:
