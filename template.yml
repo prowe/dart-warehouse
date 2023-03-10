@@ -122,6 +122,11 @@ Resources:
                 Resource:
                   - !GetAtt RDSCluster.MasterUserSecret.SecretArn
 
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 14
+
   Cluster:
     Type: AWS::ECS::Cluster
     Properties:
@@ -152,6 +157,12 @@ Resources:
               ValueFrom: !Sub "${RDSCluster.MasterUserSecret.SecretArn}:username::" 
             - Name: DBT_PASSWORD
               ValueFrom: !Sub "${RDSCluster.MasterUserSecret.SecretArn}:password::"
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: dbt
 
   SchedulerRole:
     Type: AWS::IAM::Role
