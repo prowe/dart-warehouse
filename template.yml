@@ -158,9 +158,10 @@ Resources:
     Type: AWS::Scheduler::Schedule
     Properties:
       Description: Runs the DART Warehouse build process
-      ScheduleExpression: "rate(5 minutes)"
+      ScheduleExpression: "rate(5 minute)"
       FlexibleTimeWindow:
-        Mode: Off
+        Mode: "FLEXIBLE"
+        MaximumWindowInMinutes: 2
       Target:
         Arn: !GetAtt Cluster.Arn
         RoleArn: !GetAtt DBTTaskRole.Arn
