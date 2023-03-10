@@ -184,6 +184,9 @@ Resources:
                 Action:
                   - ecs:RunTask
                 Resource: "*"
+              - Effect:
+                Action: iam:PassRole
+                Resource: !GetAtt !=DBTTaskRole.Arn
 
   WarehouseBuildSchedule:
     Type: AWS::Scheduler::Schedule
