@@ -112,6 +112,7 @@ Resources:
                 "aws:SourceAccount": !Ref AWS::AccountId
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+        - arn:aws:iam::aws:policy/AmazonECS_FullAccess
       Policies:
         - PolicyName: root
           PolicyDocument:
