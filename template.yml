@@ -103,7 +103,9 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Service: ecs-tasks.amazonaws.com
+              Service:
+                - ecs-tasks.amazonaws.com
+                - scheduler.amazonaws.com
             Action: sts:AssumeRole
             Condition:
               StringEquals:
@@ -161,7 +163,7 @@ Resources:
         Mode: OFF
       Target:
         Arn: !GetAtt Cluster.Arn
-        # RoleArn: !GetAtt DBTTaskRole.Arn
+        RoleArn: !GetAtt DBTTaskRole.Arn
         EcsParameters:
           TaskCount: 1
           LaunchType: FARGATE
