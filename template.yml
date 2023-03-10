@@ -193,10 +193,10 @@ Resources:
       ScheduleExpressionTimezone: "America/Chicago"
       FlexibleTimeWindow: 
         Mode: "OFF"
-      Input: {}
       Target:
         Arn: !GetAtt Cluster.Arn
         RoleArn: !GetAtt SchedulerRole.Arn
+        Input: {}
         EcsParameters:
           TaskCount: 1
           LaunchType: FARGATE
