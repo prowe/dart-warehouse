@@ -162,6 +162,58 @@ Resources:
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: dbt
 
+  StateMachineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                "aws:SourceAccount": !Ref AWS::AccountId
+      Policies:
+        - PolicyName: runtasks
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecs:RunTask
+                Resource: "*"
+              - Effect: Allow
+                Action: iam:PassRole
+                Resource: !GetAtt DBTTaskRole.Arn
+
+  WarehouseBuildStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      RoleArn: !GetAtt StateMachineRole.Arn
+      Definition:
+        StartAt: RunDBT
+        States:
+          RunDBT:
+            Type: Task
+            End: true
+            Resource: "arn:aws:states:::ecs:runTask.sync"
+            Parameters:
+              Cluster: !GetAtt Cluster.Arn
+              TaskDefinition: !Ref DBTTaskDefinition
+              LaunchType: FARGATE
+              NetworkConfiguration:
+                awsvpcConfiguration:
+                  assignPublicIp: ENABLED
+                  subnets:
+                    - subnet-d30953b4
+                    - subnet-86c62ccb
+                    - subnet-51001c5e
+                    - subnet-b3092eef
+                    - subnet-29b0de17
+                    - subnet-3b103115
+
   SchedulerRole:
     Type: AWS::IAM::Role
     Properties:
@@ -185,36 +237,21 @@ Resources:
                   - ecs:RunTask
                 Resource: "*"
               - Effect: Allow
-                Action: iam:PassRole
-                Resource: !GetAtt DBTTaskRole.Arn
+                Action: states:*
+                Resource: !Ref WarehouseBuildStateMachine
 
   WarehouseBuildSchedule:
     Type: AWS::Scheduler::Schedule
     Properties:
       Description: Runs the DART Warehouse build process
-      ScheduleExpression: "rate(1 day)"
+      ScheduleExpression: "rate(10 minutes)"
       ScheduleExpressionTimezone: "America/Chicago"
       FlexibleTimeWindow: 
         Mode: "OFF"
       Target:
-        Arn: !GetAtt Cluster.Arn
-        RoleArn: !GetAtt SchedulerRole.Arn
+        Arn: 
+        RoleArn: !Ref WarehouseBuildStateMachine
         Input: "{}"
-        EcsParameters:
-          TaskCount: 1
-          LaunchType: FARGATE
-          EnableECSManagedTags: true
-          TaskDefinitionArn: !Ref DBTTaskDefinition
-          NetworkConfiguration:
-            AwsvpcConfiguration:
-              AssignPublicIp: ENABLED
-              Subnets:
-                - subnet-d30953b4
-                - subnet-86c62ccb
-                - subnet-51001c5e
-                - subnet-b3092eef
-                - subnet-29b0de17
-                - subnet-3b103115
 
 Outputs:
   DatabaseAddress:
