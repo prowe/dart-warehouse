@@ -2,7 +2,8 @@ version: 2
 models:
   - name: vehicle_position_fact
     config:
-      materialized: table
+      materialized: incremental
+      unique_key: [ 'vehicle_id', 'at_ts' ]
       indexes:
         - columns: [ 'at_ts' ]
         - columns: [ 'vehicle_id', 'at_ts' ]

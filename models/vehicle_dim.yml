@@ -2,7 +2,8 @@ version: 2
 models:
   - name: vehicle_dim
     config:
-      materialized: table
+      materialized: incremental
+      unique_key: [ 'id' ]
       indexes:
         - columns: [ 'id' ]
           unique: true

@@ -204,7 +204,7 @@ Resources:
               TaskDefinition: !Ref DBTTaskDefinition
               LaunchType: FARGATE
               NetworkConfiguration:
-                AwsVpcConfiguration:
+                AwsvpcConfiguration:
                   AssignPublicIp: ENABLED
                   Subnets:
                     - subnet-d30953b4
@@ -249,8 +249,8 @@ Resources:
       FlexibleTimeWindow: 
         Mode: "OFF"
       Target:
-        Arn: 
-        RoleArn: !Ref WarehouseBuildStateMachine
+        Arn: !Ref WarehouseBuildStateMachine
+        RoleArn: !GetAtt SchedulerRole.Arn
         Input: "{}"
 
 Outputs:
