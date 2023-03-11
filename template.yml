@@ -148,6 +148,8 @@ Resources:
           Command:
             - build
           Environment:
+            - Name: DBT_LOG_FORMAT
+              Value: json
             - Name: DBT_HOST
               Value: !GetAtt RDSCluster.Endpoint.Address
           Secrets:
