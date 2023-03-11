@@ -182,7 +182,10 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - ecs:RunTask
+                  - ecs:*
+                  - events:PutTargets
+                  - events:PutRule
+                  - events:DescribeRule
                 Resource: "*"
               - Effect: Allow
                 Action: iam:PassRole
