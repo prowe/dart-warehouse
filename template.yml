@@ -204,9 +204,9 @@ Resources:
               TaskDefinition: !Ref DBTTaskDefinition
               LaunchType: FARGATE
               NetworkConfiguration:
-                awsvpcConfiguration:
-                  assignPublicIp: ENABLED
-                  subnets:
+                AwsVpcConfiguration:
+                  AssignPublicIp: ENABLED
+                  Subnets:
                     - subnet-d30953b4
                     - subnet-86c62ccb
                     - subnet-51001c5e
@@ -244,7 +244,7 @@ Resources:
     Type: AWS::Scheduler::Schedule
     Properties:
       Description: Runs the DART Warehouse build process
-      ScheduleExpression: "rate(10 minutes)"
+      ScheduleExpression: "cron(0 10 * * ? *)"
       ScheduleExpressionTimezone: "America/Chicago"
       FlexibleTimeWindow: 
         Mode: "OFF"
