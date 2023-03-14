@@ -72,4 +72,32 @@ jobs:
           sam deploy \
             --parameter-overrides \
               "ImageTag=${{ github.sha }}"
+
+  build-wh:
+    name: Build Warehouse
+    runs-on: ubuntu-latest
+    concurrency: build-wh
+    permissions:
+      id-token: write
+      contents: read
+    needs: [ "deploy" ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-region: us-east-1
+          role-to-assume: "arn:aws:iam::144406111952:role/Deployer"
+          role-duration-seconds: 900
+          role-session-name: DeployToDev
+
+      - name: Run State Machine
+        run: |
+          state_machine=$(aws cloudformation describe-stack-resources \
+            --stack-name=prowe-dart-warehouse \
+            --logical-resource-id=WarehouseBuildStateMachine \
+            --query='StackResources[0].PhysicalResourceId' --output=text)
+          aws stepfunctions start-execution --state-machine-arn=$state_machine
       
