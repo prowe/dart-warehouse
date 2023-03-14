@@ -204,6 +204,7 @@ Resources:
             Type: Task
             End: true
             Resource: "arn:aws:states:::ecs:runTask.sync"
+            TimeoutSeconds: 1800 # 30min
             Parameters:
               Cluster: !GetAtt Cluster.Arn
               TaskDefinition: !Ref DBTTaskDefinition
