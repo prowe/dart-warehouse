@@ -1,6 +1,6 @@
 version: 2
 models:
-  - name: daily_summary_fact
+  - name: vehicle_daily_summary_fact
     config:
       materialized: incremental
       unique_key: [ 'vehicle_id', 'day' ]
