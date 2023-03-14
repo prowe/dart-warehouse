@@ -36,7 +36,7 @@ Resources:
       ManageMasterUserPassword: true
       ServerlessV2ScalingConfiguration:
         MinCapacity: 0.5
-        MaxCapacity: 0.5
+        MaxCapacity: 1
       VpcSecurityGroupIds:
         - !Ref DatabaseSecurityGroup
 
