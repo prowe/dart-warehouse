@@ -4,7 +4,7 @@ with paths as (
         at_ts::date,
         count(1) as datapoint_count,
         ST_MakeLine(position::geometry order by at_ts asc)::geography as day_path
-    from vehicle_position_fact
+    from {{ ref('vehicle_position_fact') }}
     {% if is_incremental() %}
         where at_ts >= (select max(day) from {{ this }})
     {% endif %}
