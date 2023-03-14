@@ -8,6 +8,8 @@ models:
       indexes:
         - columns: [ 'vehicle_id', 'day' ]
           unique: true
+        - columns: [ 'day' ]
+          unique: true
     columns:
       - name: vehicle_id
         tests:
