@@ -1,0 +1,18 @@
+version: 2
+models:
+  - name: daily_summary_fact
+    config:
+      materialized: incremental
+      unique_key: [ 'vehicle_id', 'day' ]
+      on_schema_change: sync_all_columns
+      indexes:
+        - columns: [ 'vehicle_id', 'day' ]
+          unique: true
+    columns:
+      - name: vehicle_id
+        tests:
+          - not_null
+      - name: day
+        tests:
+          - not_null
+    
