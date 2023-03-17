@@ -57,7 +57,7 @@ jobs:
       - uses: aws-actions/setup-sam@v2
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-region: us-east-1
           role-to-assume: "arn:aws:iam::144406111952:role/Deployer"
@@ -76,7 +76,7 @@ jobs:
   build-wh:
     name: Build Warehouse
     runs-on: ubuntu-latest
-    concurrency: build-wh
+    concurrency: build-warehouse
     permissions:
       id-token: write
       contents: read
@@ -86,7 +86,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-region: us-east-1
           role-to-assume: "arn:aws:iam::144406111952:role/Deployer"
@@ -94,10 +94,6 @@ jobs:
           role-session-name: DeployToDev
 
       - name: Run State Machine
-        run: |
-          state_machine=$(aws cloudformation describe-stack-resources \
-            --stack-name=prowe-dart-warehouse \
-            --logical-resource-id=WarehouseBuildStateMachine \
-            --query='StackResources[0].PhysicalResourceId' --output=text)
-          aws stepfunctions start-execution --state-machine-arn=$state_machine
+        run: ".github/workflows/run-state-machine.sh"
+          
       
