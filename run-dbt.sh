@@ -13,6 +13,7 @@ export DBT_PASSWORD=$(echo $creds | jq .password --raw-output)
 
 docker run -it \
     -v "$(pwd):/usr/app/dbt" \
+    -p 8080:8080 \
     -e AWS_DEFAULT_REGION=us-east-1 \
     -e AWS_ACCESS_KEY_ID \
     -e AWS_SECRET_ACCESS_KEY \
@@ -22,4 +23,4 @@ docker run -it \
     -e DBT_PASSWORD \
     -e DBT_PROFILES_DIR=/usr/app/dbt \
     --entrypoint=bash \
-    ghcr.io/dbt-labs/dbt-postgres "$@"
+    ghcr.io/dbt-labs/dbt-postgres:1.3.latest "$@"
