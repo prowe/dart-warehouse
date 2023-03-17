@@ -205,6 +205,9 @@ Resources:
             End: true
             Resource: "arn:aws:states:::ecs:runTask.sync"
             TimeoutSeconds: 1800 # 30min
+            Retry:
+              - ErrorEquals: [ "States.ALL" ]
+                MaxAttempts: 5
             Parameters:
               Cluster: !GetAtt Cluster.Arn
               TaskDefinition: !Ref DBTTaskDefinition
