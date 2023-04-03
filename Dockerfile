@@ -1,9 +1,8 @@
-FROM ghcr.io/dbt-labs/dbt-postgres:1.3.latest
+FROM ghcr.io/dbt-labs/dbt-core:1.3.latest
 
-ENV DBT_HOST=TODO
-ENV DBT_USER=TODO
-ENV DBT_PASSWORD=TODO
 ENV DBT_PROFILES_DIR=/usr/app/dbt
+
+RUN pip install dbt-athena-community
 
 ADD . .
 

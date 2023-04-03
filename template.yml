@@ -15,87 +15,16 @@ Resources:
     Type: "AWS::ResourceGroups::Group" 
     Properties:
       Name: !Ref AWS::StackName
-      Description: "Resources for the dart_warehouse POC"
+      Description: "Resources for the dart_datalake POC"
+      ResourceQuery:
+        Type: CLOUDFORMATION_STACK_1_0
+        Query:
+          StackIdentifier: !Ref AWS::StackId
 
-  DatabaseSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Allow SQL ingress
-      VpcId: vpc-27ccbb5d
-      SecurityGroupIngress:
-        - IpProtocol: "-1"
-          CidrIp: 0.0.0.0/0
+  DataBucket:
+    Type: AWS::S3::Bucket
 
-  RDSCluster: 
-    Type: "AWS::RDS::DBCluster"
-    DeletionPolicy: Delete
-    Properties:
-      Engine: aurora-postgresql
-      EngineVersion: 14.6
-      MasterUsername: postgres
-      ManageMasterUserPassword: true
-      ServerlessV2ScalingConfiguration:
-        MinCapacity: 0.5
-        MaxCapacity: 1
-      VpcSecurityGroupIds:
-        - !Ref DatabaseSecurityGroup
-
-  DBInstance:
-    Type: "AWS::RDS::DBInstance"
-    DeletionPolicy: Delete
-    Properties: 
-      DBClusterIdentifier: !Ref RDSCluster
-      DBInstanceClass: db.serverless
-      Engine: aurora-postgresql
-      PubliclyAccessible: true
-
-  # RedshiftNamespace:
-  #   Type: AWS::RedshiftServerless::Namespace
-  #   Properties:
-  #     NamespaceName: dart-warehouse
-
-  # RedshiftWorkgroup:
-  #   Type: AWS::RedshiftServerless::Workgroup
-  #   Properties:
-  #     WorkgroupName: dart-warehouse-wg
-  #     NamespaceName: !Ref RedshiftNamespace
-  #     PubliclyAccessible: true
-  #     BaseCapacity: 32
-  #     SecurityGroupIds:
-  #       - !Ref RedshiftSecurityGroup
-  #     Tags:
-  #       - Key: RedshiftDataFullAccess
-  #         Value: "true"
-
-  PollVehiclePositions:
-    Type: AWS::Serverless::Function
-    DependsOn:
-      - DBInstance
-    Properties:
-      CodeUri: poll_dart_functions
-      Handler: poll_vehicle_positions.handler
-      Layers:
-       - arn:aws:lambda:us-east-1:177933569100:layer:AWS-Parameters-and-Secrets-Lambda-Extension:4
-      MemorySize: 256
-      Timeout: 30
-      Environment:
-        Variables:
-          DATABASE_HOST: !GetAtt RDSCluster.Endpoint.Address
-          DATABASE_PORT: !GetAtt RDSCluster.Endpoint.Port
-          DATABASE_SECRET_ARN: !GetAtt RDSCluster.MasterUserSecret.SecretArn
-      Policies:
-        - Version: '2012-10-17' 
-          Statement:
-            - Effect: Allow
-              Action: "secretsmanager:GetSecretValue"
-              Resource: !GetAtt RDSCluster.MasterUserSecret.SecretArn
-      Events:
-        ScheduleEvent:
-          Type: ScheduleV2
-          Properties:
-            ScheduleExpression: "rate(1 minute)"
-
-  DBTTaskRole:
+  DeliveryStreamRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -103,22 +32,104 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Service: ecs-tasks.amazonaws.com
+              Service: firehose.amazonaws.com
             Action: sts:AssumeRole
             Condition:
               StringEquals:
                 "aws:SourceAccount": !Ref AWS::AccountId
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
-        - arn:aws:iam::aws:policy/AmazonECS_FullAccess
       Policies:
         - PolicyName: root
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
               - Effect: Allow
-                Action: "secretsmanager:GetSecretValue"
-                Resource: !GetAtt RDSCluster.MasterUserSecret.SecretArn
+                Action:
+                  - "s3:AbortMultipartUpload"
+                  - "s3:GetBucketLocation"
+                  - "s3:GetObject"
+                  - "s3:ListBucket"
+                  - "s3:ListBucketMultipartUploads"
+                  - "s3:PutObject"
+                Resource:
+                  - !GetAtt DataBucket.Arn
+                  - !Sub "${DataBucket.Arn}/*"
+  
+  VehiclePositionDeliveryStream:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      ExtendedS3DestinationConfiguration:
+        BucketARN: !GetAtt DataBucket.Arn
+        RoleARN: !GetAtt DeliveryStreamRole.Arn
+        Prefix: vehicle_position_events
+
+  PollVehiclePositions:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: poll_dart_functions
+      Handler: poll_vehicle_positions.handler
+      MemorySize: 256
+      Timeout: 15
+      Environment:
+        Variables:
+          STREAM_NAME: !Ref VehiclePositionDeliveryStream
+      Policies:
+        - Version: '2012-10-17' 
+          Statement:
+            - Effect: Allow
+              Action: "firehose:PutRecordBatch"
+              Resource: !GetAtt VehiclePositionDeliveryStream.Arn
+      Events:
+        PollPositionsEvent:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: "rate(1 minute)"
+
+  Database:
+    Type: AWS::Glue::Database
+    Properties: 
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput: 
+        Name: dart_lake
+        Description: Holds DART transit data (Paul R)
+        LocationUri: !Sub "s3://${DataBucket}/"
+
+  AthenaWorkgroup:
+    Type: AWS::Athena::WorkGroup
+    Properties:
+      Name: dart_lake
+      Description: Workgroup for querying the DART DataLake
+      State: ENABLED
+      WorkGroupConfiguration:
+        EngineVersion:
+          SelectedEngineVersion: "Athena engine version 3"
+        EnforceWorkGroupConfiguration: true
+        ResultConfiguration:
+          OutputLocation: !Sub "s3://${DataBucket}/query_results/"
+
+  # DBTTaskRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     AssumeRolePolicyDocument:
+  #       Version: "2012-10-17"
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             Service: ecs-tasks.amazonaws.com
+  #           Action: sts:AssumeRole
+  #           Condition:
+  #             StringEquals:
+  #               "aws:SourceAccount": !Ref AWS::AccountId
+  #     ManagedPolicyArns:
+  #       - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+  #       - arn:aws:iam::aws:policy/AmazonECS_FullAccess
+  #     Policies:
+  #       - PolicyName: root
+  #         PolicyDocument:
+  #           Version: "2012-10-17"
+  #           Statement:
+  #             - Effect: Allow
+  #               Action: "secretsmanager:GetSecretValue"
+  #               Resource: !GetAtt RDSCluster.MasterUserSecret.SecretArn
 
   LogGroup:
     Type: AWS::Logs::LogGroup
@@ -131,141 +142,137 @@ Resources:
       CapacityProviders:
         - FARGATE
 
-  DBTTaskDefinition:
-    Type: AWS::ECS::TaskDefinition
-    Properties:
-      Family: dart-warehouse-dbt
-      Cpu: 512
-      Memory: 1024
-      NetworkMode: awsvpc
-      RequiresCompatibilities:
-        - FARGATE
-      TaskRoleArn: !GetAtt DBTTaskRole.Arn
-      ExecutionRoleArn: !GetAtt DBTTaskRole.Arn
-      ContainerDefinitions:
-        - Name: dbt
-          Image: !Sub "ghcr.io/sourceallies/dart-warehouse/dbt:${ImageTag}"
-          Command:
-            - build
-          Environment:
-            - Name: DBT_LOG_FORMAT
-              Value: json
-            - Name: DBT_HOST
-              Value: !GetAtt RDSCluster.Endpoint.Address
-          Secrets:
-            - Name: DBT_USER
-              ValueFrom: !Sub "${RDSCluster.MasterUserSecret.SecretArn}:username::" 
-            - Name: DBT_PASSWORD
-              ValueFrom: !Sub "${RDSCluster.MasterUserSecret.SecretArn}:password::"
-          LogConfiguration:
-            LogDriver: awslogs
-            Options:
-              awslogs-group: !Ref LogGroup
-              awslogs-region: !Ref AWS::Region
-              awslogs-stream-prefix: dbt
+  # DBTTaskDefinition:
+  #   Type: AWS::ECS::TaskDefinition
+  #   Properties:
+  #     Family: dart-warehouse-dbt
+  #     Cpu: 512
+  #     Memory: 1024
+  #     NetworkMode: awsvpc
+  #     RequiresCompatibilities:
+  #       - FARGATE
+  #     TaskRoleArn: !GetAtt DBTTaskRole.Arn
+  #     ExecutionRoleArn: !GetAtt DBTTaskRole.Arn
+  #     ContainerDefinitions:
+  #       - Name: dbt
+  #         Image: !Sub "ghcr.io/sourceallies/dart-warehouse/dbt:${ImageTag}"
+  #         Command:
+  #           - build
+  #         Environment:
+  #           - Name: DBT_LOG_FORMAT
+  #             Value: json
+  #           - Name: DBT_HOST
+  #             Value: !GetAtt RDSCluster.Endpoint.Address
+  #         Secrets:
+  #           - Name: DBT_USER
+  #             ValueFrom: !Sub "${RDSCluster.MasterUserSecret.SecretArn}:username::" 
+  #           - Name: DBT_PASSWORD
+  #             ValueFrom: !Sub "${RDSCluster.MasterUserSecret.SecretArn}:password::"
+  #         LogConfiguration:
+  #           LogDriver: awslogs
+  #           Options:
+  #             awslogs-group: !Ref LogGroup
+  #             awslogs-region: !Ref AWS::Region
+  #             awslogs-stream-prefix: dbt
 
-  StateMachineRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: states.amazonaws.com
-            Action: sts:AssumeRole
-            Condition:
-              StringEquals:
-                "aws:SourceAccount": !Ref AWS::AccountId
-      Policies:
-        - PolicyName: runtasks
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - ecs:*
-                  - events:PutTargets
-                  - events:PutRule
-                  - events:DescribeRule
-                Resource: "*"
-              - Effect: Allow
-                Action: iam:PassRole
-                Resource: !GetAtt DBTTaskRole.Arn
+  # StateMachineRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     AssumeRolePolicyDocument:
+  #       Version: "2012-10-17"
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             Service: states.amazonaws.com
+  #           Action: sts:AssumeRole
+  #           Condition:
+  #             StringEquals:
+  #               "aws:SourceAccount": !Ref AWS::AccountId
+  #     Policies:
+  #       - PolicyName: runtasks
+  #         PolicyDocument:
+  #           Version: "2012-10-17"
+  #           Statement:
+  #             - Effect: Allow
+  #               Action:
+  #                 - ecs:*
+  #                 - events:PutTargets
+  #                 - events:PutRule
+  #                 - events:DescribeRule
+  #               Resource: "*"
+  #             - Effect: Allow
+  #               Action: iam:PassRole
+  #               Resource: !GetAtt DBTTaskRole.Arn
 
-  WarehouseBuildStateMachine:
-    Type: AWS::StepFunctions::StateMachine
-    Properties:
-      RoleArn: !GetAtt StateMachineRole.Arn
-      Definition:
-        StartAt: RunDBT
-        States:
-          RunDBT:
-            Type: Task
-            End: true
-            Resource: "arn:aws:states:::ecs:runTask.sync"
-            TimeoutSeconds: 1800 # 30min
-            Retry:
-              - ErrorEquals: [ "States.ALL" ]
-                MaxAttempts: 5
-            Parameters:
-              Cluster: !GetAtt Cluster.Arn
-              TaskDefinition: !Ref DBTTaskDefinition
-              LaunchType: FARGATE
-              NetworkConfiguration:
-                AwsvpcConfiguration:
-                  AssignPublicIp: ENABLED
-                  Subnets:
-                    - subnet-d30953b4
-                    - subnet-86c62ccb
-                    - subnet-51001c5e
-                    - subnet-b3092eef
-                    - subnet-29b0de17
-                    - subnet-3b103115
+  # WarehouseBuildStateMachine:
+  #   Type: AWS::StepFunctions::StateMachine
+  #   Properties:
+  #     RoleArn: !GetAtt StateMachineRole.Arn
+  #     Definition:
+  #       StartAt: RunDBT
+  #       States:
+  #         RunDBT:
+  #           Type: Task
+  #           End: true
+  #           Resource: "arn:aws:states:::ecs:runTask.sync"
+  #           TimeoutSeconds: 1800 # 30min
+  #           Retry:
+  #             - ErrorEquals: [ "States.ALL" ]
+  #               MaxAttempts: 5
+  #           Parameters:
+  #             Cluster: !GetAtt Cluster.Arn
+  #             TaskDefinition: !Ref DBTTaskDefinition
+  #             LaunchType: FARGATE
+  #             NetworkConfiguration:
+  #               AwsvpcConfiguration:
+  #                 AssignPublicIp: ENABLED
+  #                 Subnets:
+  #                   - subnet-d30953b4
+  #                   - subnet-86c62ccb
+  #                   - subnet-51001c5e
+  #                   - subnet-b3092eef
+  #                   - subnet-29b0de17
+  #                   - subnet-3b103115
 
-  SchedulerRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: scheduler.amazonaws.com
-            Action: sts:AssumeRole
-            Condition:
-              StringEquals:
-                "aws:SourceAccount": !Ref AWS::AccountId
-      Policies:
-        - PolicyName: runtasks
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action:
-                  - ecs:RunTask
-                Resource: "*"
-              - Effect: Allow
-                Action: states:*
-                Resource: !Ref WarehouseBuildStateMachine
+  # SchedulerRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     AssumeRolePolicyDocument:
+  #       Version: "2012-10-17"
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             Service: scheduler.amazonaws.com
+  #           Action: sts:AssumeRole
+  #           Condition:
+  #             StringEquals:
+  #               "aws:SourceAccount": !Ref AWS::AccountId
+  #     Policies:
+  #       - PolicyName: runtasks
+  #         PolicyDocument:
+  #           Version: "2012-10-17"
+  #           Statement:
+  #             - Effect: Allow
+  #               Action:
+  #                 - ecs:RunTask
+  #               Resource: "*"
+  #             - Effect: Allow
+  #               Action: states:*
+  #               Resource: !Ref WarehouseBuildStateMachine
 
-  WarehouseBuildSchedule:
-    Type: AWS::Scheduler::Schedule
-    Properties:
-      Description: Runs the DART Warehouse build process
-      ScheduleExpression: "cron(0 10 * * ? *)"
-      ScheduleExpressionTimezone: "America/Chicago"
-      FlexibleTimeWindow: 
-        Mode: "OFF"
-      Target:
-        Arn: !Ref WarehouseBuildStateMachine
-        RoleArn: !GetAtt SchedulerRole.Arn
-        Input: "{}"
+  # WarehouseBuildSchedule:
+  #   Type: AWS::Scheduler::Schedule
+  #   Properties:
+  #     Description: Runs the DART Warehouse build process
+  #     ScheduleExpression: "cron(0 10 * * ? *)"
+  #     ScheduleExpressionTimezone: "America/Chicago"
+  #     FlexibleTimeWindow: 
+  #       Mode: "OFF"
+  #     Target:
+  #       Arn: !Ref WarehouseBuildStateMachine
+  #       RoleArn: !GetAtt SchedulerRole.Arn
+  #       Input: "{}"
 
 Outputs:
-  DatabaseAddress:
-    Value: !GetAtt RDSCluster.Endpoint.Address
-  DatabasePort:
-    Value: !GetAtt RDSCluster.Endpoint.Port
-  DatabaseSecretArn:
-    Value: !GetAtt RDSCluster.MasterUserSecret.SecretArn
+  DeliveryStream:
+    Value: !Ref VehiclePositionDeliveryStream
