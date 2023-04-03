@@ -60,7 +60,9 @@ Resources:
       ExtendedS3DestinationConfiguration:
         BucketARN: !GetAtt DataBucket.Arn
         RoleARN: !GetAtt DeliveryStreamRole.Arn
-        Prefix: vehicle_position_events
+        Prefix: vehicle_position_events/
+        BufferingHints:
+          IntervalInSeconds: 900
 
   PollVehiclePositions:
     Type: AWS::Serverless::Function
