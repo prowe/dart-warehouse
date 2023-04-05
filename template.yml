@@ -108,6 +108,53 @@ Resources:
         ResultConfiguration:
           OutputLocation: !Sub "s3://${DataBucket}/query_results/"
 
+  VehiclePositionEventsTable:
+    Type: AWS::Glue::Table
+    Properties: 
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref Database
+      TableInput:
+        Description: Raw events as ingested by the polling Lambda
+        Name: vehicle_position_events
+        PartitionKeys:
+          - Name: injest_date
+            Type: string
+          - Name: injest_hour
+            Type: int
+        Parameters:
+          "projection.enabled": "true"
+          "projection.injest_date.type": "date"
+          "projection.injest_date.format": "yyyy/MM/dd"
+          "projection.injest_date.range": "2023/04/01,NOW"
+          "projection.injest_date.interval": "1"
+          "projection.injest_date.interval.unit": "DAYS"
+          "projection.injest_hour.type": "integer"
+          "projection.injest_hour.range": "0,23"
+          "projection.injest_hour.digits": "2"
+          "storage.location.template": !Sub "s3://${DataBucket}/vehicle_position_events/${!injest_date}/${!injest_hour}/"
+        StorageDescriptor:
+          Location: !Sub "s3://${DataBucket}/vehicle_position_events/"
+          Columns:
+            - Name: timestamp
+              Type: string
+            - Name: trip
+              Type: struct<tripId:string,startDate:string,routeId:string,directionId:int,scheduleRelationship:string>
+            - Name: position
+              Type: struct<latitude:double,longitude:double,bearing:double,speed:double>
+            - Name: vehicle
+              Type: struct<id:string,label:string>
+            - Name: occupancystatus
+              Type: string
+          Parameters:
+            classification: json
+            typeOfData: file
+            compressionType: none
+          InputFormat: org.apache.hadoop.mapred.TextInputFormat
+          OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+          SerdeInfo:
+            SerializationLibrary: "org.openx.data.jsonserde.JsonSerDe"
+
+
   # DBTTaskRole:
   #   Type: AWS::IAM::Role
   #   Properties:
