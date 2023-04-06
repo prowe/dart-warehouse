@@ -104,9 +104,41 @@ Resources:
       WorkGroupConfiguration:
         EngineVersion:
           SelectedEngineVersion: "Athena engine version 3"
-        EnforceWorkGroupConfiguration: true
+        EnforceWorkGroupConfiguration: false
         ResultConfiguration:
           OutputLocation: !Sub "s3://${DataBucket}/query_results/"
+
+  GlueRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 
+                - glue.amazonaws.com
+                - "elasticmapreduce.amazonaws.com"
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AwsGlueSessionUserRestrictedServiceRole
+        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:passRole #This allows passing a role to itself?
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - "s3:*"
+                Resource:
+                  - !GetAtt DataBucket.Arn
+                  - !Sub "${DataBucket.Arn}/*"
+
 
   VehiclePositionEventsTable:
     Type: AWS::Glue::Table
@@ -114,8 +146,9 @@ Resources:
       CatalogId: !Ref AWS::AccountId
       DatabaseName: !Ref Database
       TableInput:
-        Description: Raw events as ingested by the polling Lambda
         Name: vehicle_position_events
+        TableType: EXTERNAL_TABLE
+        Description: Raw events as ingested by the polling Lambda
         PartitionKeys:
           - Name: injest_date
             Type: string
@@ -325,3 +358,5 @@ Resources:
 Outputs:
   DeliveryStream:
     Value: !Ref VehiclePositionDeliveryStream
+  GlueRole:
+    Value: !GetAtt GlueRole.Arn

@@ -1,0 +1,18 @@
+version: 2
+models:
+  - name: vehicle_positions
+    description: |
+      Each record represents the position of a particular vehicle at a particular timestamp.
+      Events are a roughly every minute interval.
+    config:
+      materialized: table
+    # columns:
+    #   - name: at_ts
+    #     description: The timestamp of this event, millisecond precision in America/Central timezone
+    #     tests:
+    #       - not_null
+          
+    # tests:
+    #   - dbt_utils.expression_is_true:
+    #       name: within_50mi_of_dsm_vehicle_position_fact
+    #       expression: ST_Distance(position, ST_Point(-93.6250, 41.5868, 4326)::geography) < 80467.2

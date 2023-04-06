@@ -2,11 +2,12 @@ dart_warehouse:
   target: dev
   outputs:
     dev:
-      type: postgres
-      host: "{{ env_var('DBT_HOST') }}"
-      port: 3306
-      user: "{{ env_var('DBT_USER') }}"
-      password: "{{ env_var('DBT_PASSWORD') }}"
-      dbname: postgres
-      schema: public
+      type: glue
+      region: us-east-1
+      role_arn: arn:aws:iam::144406111952:role/prowe-dart-datalake-GlueRole-Y5757RBP8C3J
+      workers: 2
+      worker_type: G.1X
+      schema: dart_lake
+      location: "s3://prowe-dart-datalake-databucket-gb4hi1nud4w6"
       threads: 3
+      extra_jars: "s3://crawler-public/json/serde/json-serde.jar"
