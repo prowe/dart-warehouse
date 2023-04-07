@@ -60,7 +60,8 @@ Resources:
       ExtendedS3DestinationConfiguration:
         BucketARN: !GetAtt DataBucket.Arn
         RoleARN: !GetAtt DeliveryStreamRole.Arn
-        Prefix: vehicle_position_events/
+        Prefix: "vehicle_position_events/!{timestamp:yyyy}-!{timestamp:MM}/"
+        ErrorOutputPrefix: errors/vehicle_position_events
         BufferingHints:
           IntervalInSeconds: 900
 
@@ -139,7 +140,6 @@ Resources:
                   - !GetAtt DataBucket.Arn
                   - !Sub "${DataBucket.Arn}/*"
 
-
   VehiclePositionEventsTable:
     Type: AWS::Glue::Table
     Properties: 
@@ -150,21 +150,16 @@ Resources:
         TableType: EXTERNAL_TABLE
         Description: Raw events as ingested by the polling Lambda
         PartitionKeys:
-          - Name: injest_date
+          - Name: injest_year_month
             Type: string
-          - Name: injest_hour
-            Type: int
         Parameters:
           "projection.enabled": "true"
-          "projection.injest_date.type": "date"
-          "projection.injest_date.format": "yyyy/MM/dd"
-          "projection.injest_date.range": "2023/04/01,NOW"
-          "projection.injest_date.interval": "1"
-          "projection.injest_date.interval.unit": "DAYS"
-          "projection.injest_hour.type": "integer"
-          "projection.injest_hour.range": "0,23"
-          "projection.injest_hour.digits": "2"
-          "storage.location.template": !Sub "s3://${DataBucket}/vehicle_position_events/${!injest_date}/${!injest_hour}/"
+          "projection.injest_year_month.type": "date"
+          "projection.injest_year_month.format": "yyyy-MM"
+          "projection.injest_year_month.range": "2023-04,NOW"
+          "projection.injest_year_month.interval": "1"
+          "projection.injest_year_month.interval.unit": "MONTHS"
+          "storage.location.template": !Sub "s3://${DataBucket}/vehicle_position_events/${!injest_year_month}/"
         StorageDescriptor:
           Location: !Sub "s3://${DataBucket}/vehicle_position_events/"
           Columns:
@@ -187,6 +182,28 @@ Resources:
           SerdeInfo:
             SerializationLibrary: "org.openx.data.jsonserde.JsonSerDe"
 
+  InjestPartitionCrawler:
+    Type: AWS::Glue::Crawler
+    Properties:
+      Role: !GetAtt GlueRole.Arn
+      Targets:
+        CatalogTargets:
+          - DatabaseName: !Ref Database
+            Tables:
+              - !Ref VehiclePositionEventsTable
+      SchemaChangePolicy:
+        DeleteBehavior: LOG
+        UpdateBehavior: LOG
+      # RecrawlPolicy:
+      #   RecrawlBehavior: CRAWL_NEW_FOLDERS_ONLY
+      Configuration:
+        Fn::ToJsonString:
+          Version: 1.0
+          CrawlerOutput:
+            Partitions:
+              AddOrUpdateBehavior: InheritFromTable
+          Grouping:
+            TableGroupingPolicy: CombineCompatibleSchemas
 
   # DBTTaskRole:
   #   Type: AWS::IAM::Role

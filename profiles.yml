@@ -9,5 +9,5 @@ dart_warehouse:
       worker_type: G.1X
       schema: dart_lake
       location: "s3://prowe-dart-datalake-databucket-gb4hi1nud4w6"
-      threads: 3
+      threads: 2
       extra_jars: "s3://crawler-public/json/serde/json-serde.jar"
