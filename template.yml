@@ -28,7 +28,6 @@ Resources:
 
   RDSCluster: 
     Type: "AWS::RDS::DBCluster"
-    DeletionPolicy: Delete
     Properties:
       Engine: aurora-postgresql
       EngineVersion: 14.6
@@ -42,7 +41,6 @@ Resources:
 
   DBInstance:
     Type: "AWS::RDS::DBInstance"
-    DeletionPolicy: Delete
     Properties: 
       DBClusterIdentifier: !Ref RDSCluster
       DBInstanceClass: db.serverless
